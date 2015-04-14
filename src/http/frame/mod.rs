@@ -47,6 +47,10 @@ pub use self::pingframe::{
     PingFlag,
     PingFrame
 };
+pub use self::rststreamframe::{
+    ErrorFlag,
+    RstStreamFrame,
+}
 pub use self::frames::*;
 //use self::testconfig::*;
 pub use self::dataframe::*;
