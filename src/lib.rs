@@ -2,6 +2,10 @@
 // #![feature(std_misc)]
 
 // #[macro_use] extern crate log;
+// #![feature(std_misc)]
+
+// #[macro_use] extern crate log;
+#[macro_use] extern crate log;
 extern crate hpack;
 extern crate openssl;
 

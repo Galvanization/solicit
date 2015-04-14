@@ -47,6 +47,12 @@ pub use self::pingframe::{
     PingFlag,
     PingFrame
 };
+pub use self::frames::*;
+//use self::testconfig::*;
+pub use self::dataframe::*;
+pub use self::settingsframe::*;
+pub use self::headersframe::*;
+pub use self::rststreamframe::*;
 
 pub mod frames;
 mod test;
@@ -54,3 +60,4 @@ pub mod dataframe;
 pub mod settingsframe;
 pub mod headersframe;
 pub mod pingframe;
+pub mod rststreamframe;
