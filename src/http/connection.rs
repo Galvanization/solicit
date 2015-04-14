@@ -88,7 +88,7 @@ impl<S> HttpConnection<S> where S: TransportStream {
     ///
     /// If the frame is successfully written, returns a unit Ok (`Ok(())`).
     pub fn send_frame<F: Frame>(&mut self, frame: F) -> HttpResult<()> {
-        debug!("Sending frame ... {:?}", frame.get_header());
+        // debug!("Sending frame ... {:?}", frame.get_header());
         try!(self.stream.write_all(&frame.serialize()));
         Ok(())
     }
@@ -113,7 +113,7 @@ impl<S> HttpConnection<S> where S: TransportStream {
     /// in the appropriate variant of the `HttpFrame` enum.
     pub fn recv_frame(&mut self) -> HttpResult<HttpFrame> {
         let header = unpack_header(&try!(self.read_header_bytes()));
-        debug!("Received frame header {:?}", header);
+        // debug!("Received frame header {:?}", header);
 
         let payload = try!(self.read_payload(header.0));
         let raw_frame = RawFrame::with_payload(header, payload);
@@ -156,7 +156,7 @@ impl<S> HttpConnection<S> where S: TransportStream {
     /// Any IO errors raised by the underlying transport layer are wrapped in a
     /// `HttpError::IoError` variant and propagated upwards.
     fn read_payload(&mut self, len: u32) -> HttpResult<Vec<u8>> {
-        debug!("Trying to read {} bytes of frame payload", len);
+        // debug!("Trying to read {} bytes of frame payload", len);
         let length = len as usize;
         let mut buf: Vec<u8> = Vec::with_capacity(length);
         // This is completely safe since we *just* allocated the vector with
@@ -444,7 +444,7 @@ impl<TS, S> ClientConnection<TS, S> where TS: TransportStream, S: Session {
             frame
         };
         try!(self.conn.send_frame(settings));
-        debug!("Sent client preface");
+        // debug!("Sent client preface");
 
         Ok(())
     }
@@ -464,7 +464,7 @@ impl<TS, S> ClientConnection<TS, S> where TS: TransportStream, S: Session {
     fn read_preface(&mut self) -> HttpResult<()> {
         match self.conn.recv_frame() {
             Ok(HttpFrame::SettingsFrame(settings)) => {
-                debug!("Correctly received a SETTINGS frame from the server");
+                // debug!("Correctly received a SETTINGS frame from the server");
                 try!(self.handle_settings_frame(settings));
             },
             // Wrong frame received...
@@ -508,15 +508,15 @@ impl<TS, S> ClientConnection<TS, S> where TS: TransportStream, S: Session {
     ///
     /// All communication errors are propagated.
     pub fn handle_next_frame(&mut self) -> HttpResult<()> {
-        debug!("Waiting for frame...");
+        // debug!("Waiting for frame...");
         let frame = match self.conn.recv_frame() {
             Ok(frame) => frame,
             Err(HttpError::UnknownFrameType) => {
-                debug!("Ignoring unknown frame type");
+                // debug!("Ignoring unknown frame type");
                 return Ok(())
             },
             Err(e) => {
-                debug!("Encountered an HTTP/2 error, stopping.");
+                // debug!("Encountered an HTTP/2 error, stopping.");
                 return Err(e);
             },
         };
@@ -528,15 +528,15 @@ impl<TS, S> ClientConnection<TS, S> where TS: TransportStream, S: Session {
     fn handle_frame(&mut self, frame: HttpFrame) -> HttpResult<()> {
         match frame {
             HttpFrame::DataFrame(frame) => {
-                debug!("Data frame received");
+                // debug!("Data frame received");
                 self.handle_data_frame(frame)
             },
             HttpFrame::HeadersFrame(frame) => {
-                debug!("Headers frame received");
+                // debug!("Headers frame received");
                 self.handle_headers_frame(frame)
             },
             HttpFrame::SettingsFrame(frame) => {
-                debug!("Settings frame received");
+                // debug!("Settings frame received");
                 self.handle_settings_frame(frame)
             }
         }
@@ -547,7 +547,7 @@ impl<TS, S> ClientConnection<TS, S> where TS: TransportStream, S: Session {
         self.session.new_data_chunk(frame.get_stream_id(), &frame.data);
 
         if frame.is_set(DataFlag::EndStream) {
-            debug!("End of stream {}", frame.get_stream_id());
+            // debug!("End of stream {}", frame.get_stream_id());
             self.session.end_of_stream(frame.get_stream_id())
         }
 
@@ -561,7 +561,7 @@ impl<TS, S> ClientConnection<TS, S> where TS: TransportStream, S: Session {
         self.session.new_headers(frame.get_stream_id(), headers);
 
         if frame.is_end_of_stream() {
-            debug!("End of stream {}", frame.get_stream_id());
+            // debug!("End of stream {}", frame.get_stream_id());
             self.session.end_of_stream(frame.get_stream_id());
         }
 
@@ -573,7 +573,7 @@ impl<TS, S> ClientConnection<TS, S> where TS: TransportStream, S: Session {
         if !frame.is_ack() {
             // TODO: Actually handle the settings change before
             //       sending out the ACK.
-            debug!("Sending a SETTINGS ack");
+            // debug!("Sending a SETTINGS ack");
             try!(self.conn.send_frame(SettingsFrame::new_ack()));
         }
 
