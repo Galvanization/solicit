@@ -163,10 +163,10 @@ impl<S> DefaultSession<S> where S: Stream {
 
 impl<S> Session for DefaultSession<S> where S: Stream {
     fn new_data_chunk(&mut self, stream_id: StreamId, data: &[u8]) {
-        debug!("Data chunk for stream {}", stream_id);
+        // debug!("Data chunk for stream {}", stream_id);
         let mut stream = match self.streams.get_mut(&stream_id) {
             None => {
-                debug!("Received a frame for an unknown stream!");
+                // debug!("Received a frame for an unknown stream!");
                 return;
             },
             Some(stream) => stream,
@@ -176,10 +176,10 @@ impl<S> Session for DefaultSession<S> where S: Stream {
     }
 
     fn new_headers(&mut self, stream_id: StreamId, headers: Vec<Header>) {
-        debug!("Headers for stream {}", stream_id);
+        // debug!("Headers for stream {}", stream_id);
         let mut stream = match self.streams.get_mut(&stream_id) {
             None => {
-                debug!("Received a frame for an unknown stream!");
+                // debug!("Received a frame for an unknown stream!");
                 return;
             },
             Some(stream) => stream,
@@ -189,10 +189,10 @@ impl<S> Session for DefaultSession<S> where S: Stream {
     }
 
     fn end_of_stream(&mut self, stream_id: StreamId) {
-        debug!("End of stream {}", stream_id);
+        // debug!("End of stream {}", stream_id);
         let mut stream = match self.streams.get_mut(&stream_id) {
             None => {
-                debug!("Received a frame for an unknown stream!");
+                // debug!("Received a frame for an unknown stream!");
                 return;
             },
             Some(stream) => stream,

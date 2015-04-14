@@ -141,7 +141,7 @@ impl ClientService {
         // settings changes that may happen in the mean time until there's a
         // new request, since nothing is reading from the connection until then.
         if self.outstanding_reqs == 0 {
-            debug!("Service thread blocking until there's a new request...");
+            // debug!("Service thread blocking until there's a new request...");
             let async_req = match self.rx.recv() {
                 Ok(req) => req,
                 // The receive operation can only fail if the sender has
@@ -153,7 +153,7 @@ impl ClientService {
         }
 
         // Handles the next frame...
-        debug!("Handling next frame");
+        // debug!("Handling next frame");
         match self.conn.handle_next_frame() {
             Ok(_) => {},
             Err(e) => return Err(ClientServiceErr::Http(e)),
@@ -178,7 +178,7 @@ impl ClientService {
                                  async_req.path,
                                  async_req.headers);
 
-        debug!("Sending new request... id = {}", req.stream_id);
+        // debug!("Sending new request... id = {}", req.stream_id);
 
         self.conn.session.new_stream(req.stream_id);
         self.chans.insert(req.stream_id, async_req.tx);
@@ -254,7 +254,7 @@ impl ClientService {
         if self.outstanding_reqs < self.limit {
             // Try to queue another request since we haven't gone over
             // the (arbitrary) limit.
-            debug!("Not over the limit yet. Checking for more requests...");
+            // debug!("Not over the limit yet. Checking for more requests...");
             if let Ok(async_req) = self.rx.try_recv() {
                 self.send_request(async_req);
             }
@@ -328,7 +328,7 @@ impl Client {
 
         thread::spawn(move || {
             while let Ok(_) = service.run_once() {}
-            debug!("Service thread halting");
+            // debug!("Service thread halting");
         });
 
         Some(Client {
