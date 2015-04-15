@@ -105,6 +105,8 @@ pub struct PriorityFrame {
     pub stream_id: StreamId,
     /// The stream dependency information
     pub stream_dep: StreamDependency,
+    /// `Priority` frame does not define any flags
+    flags: u8,
 }
 
 impl PriorityFrame {
@@ -113,6 +115,7 @@ impl PriorityFrame {
         PriorityFrame {
             stream_id: stream_id,
             stream_dep: stream_dep,
+            flags: 0,
         }
     }
 
@@ -165,6 +168,7 @@ impl Frame for PriorityFrame {
         Some(PriorityFrame {
             stream_id: stream_id,
             stream_dep: stream_dep,
+            flags: flags,
         })
     }
 
@@ -199,4 +203,174 @@ impl Frame for PriorityFrame {
         buf
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::frames::{Frame, RawFrame, pack_header};
+    use super::super::test::{build_test_frame};
+    use super::{PriorityFrame, NoFlag, StreamDependency};
+
+    /// Tests that a simple PRIORITY frame is correclty parsed.
+    #[test]
+    fn test_priority_frame_parse() {
+        let dep = StreamDependency::new(0, 5, true);
+        let payload = {
+            let mut buf: Vec<u8> = Vec::new();
+            buf.extend(dep.serialize().to_vec().into_iter());
+
+            buf
+        };
+        let header = (payload.len() as u32, 0x2, 0, 1);
+
+        let frame = build_test_frame::<PriorityFrame>(&header, &payload);
+
+        assert_eq!(frame.flags, 0);
+        assert_eq!(frame.get_stream_id(), 1);
+        assert_eq!(frame.stream_dep, dep);
+    }
+
+    /// Tests that a HEADERS with stream ID 0 is considered invalid.
+    #[test]
+    fn test_priority_frame_parse_invalid_stream_id() {
+        let dep = StreamDependency::new(0, 5, true);
+        let payload = {
+            let mut buf: Vec<u8> = Vec::new();
+            buf.extend(dep.serialize().to_vec().into_iter());
+
+            buf
+        };
+        let header = (payload.len() as u32, 0x2, 0, 0);
+
+        let frame: Option<PriorityFrame> = Frame::from_raw(
+            RawFrame::with_payload(header, payload));
+
+        assert!(frame.is_none());
+    }
+
+    /// Tests that the `HeadersFrame::parse` method considers any frame with
+    /// a frame ID other than 1 in the frame header invalid.
+    #[test]
+    fn priority_frame_parse_invalid_type() {
+        let dep = StreamDependency::new(0, 5, true);
+        let payload = {
+            let mut buf: Vec<u8> = Vec::new();
+            buf.extend(dep.serialize().to_vec().into_iter());
+
+            buf
+        };
+        let header = (payload.len() as u32, 0x1, 0, 1);
+
+        let frame: Option<PriorityFrame> = Frame::from_raw(
+            RawFrame::with_payload(header, payload));
+
+        assert!(frame.is_none());
+    }
+
+    /// Tests that a HEADERS frame with priority gets correctly serialized.
+    #[test]
+    fn test_priority_frame_serialize() {
+        let dep = StreamDependency::new(0, 5, true);
+        let payload = {
+            let mut buf: Vec<u8> = Vec::new();
+            buf.extend(dep.serialize().to_vec().into_iter());
+
+            buf
+        };
+        let header = (payload.len() as u32, 0x2, 0, 1);
+        let expected = {
+            let headers = pack_header(&header);
+            let mut res: Vec<u8> = Vec::new();
+            res.extend(headers.to_vec().into_iter());
+            res.extend(payload.into_iter());
+
+            res
+        };
+        let frame = PriorityFrame::new(1, dep.clone());
+
+        let actual = frame.serialize();
+
+        assert_eq!(expected, actual);
+    }
+
+    /// Tests that a stream dependency structure can be correctly parsed by the
+    /// `StreamDependency::parse` method.
+    #[test]
+    fn test_parse_stream_dependency() {
+        {
+            let buf = [0, 0, 0, 1, 5];
+
+            let dep = StreamDependency::parse(&buf);
+
+            assert_eq!(dep.stream_id, 1);
+            assert_eq!(dep.weight, 5);
+            // This one was not exclusive!
+            assert!(!dep.is_exclusive)
+        }
+        {
+            // Most significant bit set => is exclusive!
+            let buf = [128, 0, 0, 1, 5];
+
+            let dep = StreamDependency::parse(&buf);
+
+            assert_eq!(dep.stream_id, 1);
+            assert_eq!(dep.weight, 5);
+            // This one was indeed exclusive!
+            assert!(dep.is_exclusive)
+        }
+        {
+            // Most significant bit set => is exclusive!
+            let buf = [255, 255, 255, 255, 5];
+
+            let dep = StreamDependency::parse(&buf);
+
+            assert_eq!(dep.stream_id, (1 << 31) - 1);
+            assert_eq!(dep.weight, 5);
+            // This one was indeed exclusive!
+            assert!(dep.is_exclusive);
+        }
+        {
+            let buf = [127, 255, 255, 255, 5];
+
+            let dep = StreamDependency::parse(&buf);
+
+            assert_eq!(dep.stream_id, (1 << 31) - 1);
+            assert_eq!(dep.weight, 5);
+            // This one was not exclusive!
+            assert!(!dep.is_exclusive);
+        }
+    }
+
+    /// Tests that a stream dependency structure can be correctly serialized by
+    /// the `StreamDependency::serialize` method.
+    #[test]
+    fn test_serialize_stream_dependency() {
+        {
+            let buf = [0, 0, 0, 1, 5];
+            let dep = StreamDependency::new(1, 5, false);
+
+            assert_eq!(buf, dep.serialize());
+        }
+        {
+            // Most significant bit set => is exclusive!
+            let buf = [128, 0, 0, 1, 5];
+            let dep = StreamDependency::new(1, 5, true);
+
+            assert_eq!(buf, dep.serialize());
+        }
+        {
+            // Most significant bit set => is exclusive!
+            let buf = [255, 255, 255, 255, 5];
+            let dep = StreamDependency::new((1 << 31) - 1, 5, true);
+
+            assert_eq!(buf, dep.serialize());
+        }
+        {
+            let buf = [127, 255, 255, 255, 5];
+            let dep = StreamDependency::new((1 << 31) - 1, 5, false);
+
+            assert_eq!(buf, dep.serialize());
+        }
+    }
+}
+
 
