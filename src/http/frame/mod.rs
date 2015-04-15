@@ -47,6 +47,9 @@ pub use self::pingframe::{
     PingFlag,
     PingFrame
 };
+pub use self::priorityframe::{
+    PriorityFrame,
+};
 
 pub mod frames;
 mod test;
@@ -54,3 +57,4 @@ pub mod dataframe;
 pub mod settingsframe;
 pub mod headersframe;
 pub mod pingframe;
+pub mod priorityframe;

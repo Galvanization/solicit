@@ -2,11 +2,30 @@ use super::super::StreamId;
 use super::frames::{
     Frame,
     Flag,
-    parse_padded_payload,
     pack_header,
     RawFrame,
     FrameHeader
 };
+
+/// An enum representing the flags that a `PingFrame` can have.
+/// The integer representation associated to each variant is that flag's
+/// bitmask.
+///
+/// HTTP/2 spec, section 6.
+#[derive(Clone)]
+#[derive(PartialEq)]
+#[derive(Debug)]
+#[derive(Copy)]
+pub enum NoFlag {
+    None = 0x0,
+}
+
+impl Flag for NoFlag {
+    #[inline]
+    fn bitmask(&self) -> u8 {
+        *self as u8
+    }
+}
 
 /// The struct represents the dependency information that can be attached to a stream
 /// and sent within HEADERS frame
@@ -62,7 +81,7 @@ impl StreamDependency {
 
     /// Serializes the `StreamDependency` into a 5-byte buffer representing the
     /// dependency description.
-    pub fn serialize(&self) -> [u8: 5] {
+    pub fn serialize(&self) -> [u8; 5] {
         let e_bit = if self.is_exclusive {
             1 << 7
         } else {
@@ -86,8 +105,6 @@ pub struct PriorityFrame {
     pub stream_id: StreamId,
     /// The stream dependency information
     pub stream_dep: StreamDependency,
-    /// The data in frame
-    pub data: Vec<u8>,
 }
 
 impl PriorityFrame {
@@ -100,18 +117,22 @@ impl PriorityFrame {
     }
 
     /// Returns the length of the payload of the current frame
+    /// Priority frame must be 5 octets
     fn payload_len(&self) -> u32 {
-        &self.data.len() as u32
+        5
     }
 }
 
 impl Frame for PriorityFrame {
+    /// `Priority` frame does not take a flag
+    type FlagType = NoFlag;
+
     /// Creates a new `PriorityFrame` with the given `RawFrame` (i.e. header and
     /// payload), if possible.
     ///
     /// # Returns
     ///
-    /// `None` if a valid `PriorityFrame` cannot be constructed from the give
+    /// `None` if a valid `PriorityFrame` cannot be constructed from the given
     /// `RawFrame`. The stream ID *MUST NOT* be 0.
     ///
     /// Otherwise, returns a newly contructed `PriorityFrame`
@@ -125,7 +146,7 @@ impl Frame for PriorityFrame {
         // Check that the length given in the header matches the payload
         // if not, soemthing went wrong and we do not consider this as
         // a valid frame.
-        if (len as u32) != raw_frame.payload.len() {
+        if (len as usize) != raw_frame.payload.len() {
             return None;
         }
         // Check that the length of the payload is 5 bytes
@@ -139,7 +160,7 @@ impl Frame for PriorityFrame {
             return None;
         }
         // Extract the stream dependecy info from the payload
-        let stream_dep = Some(StreamDependency::parse(&raw_frame.payload));
+        let stream_dep = StreamDependency::parse(&raw_frame.payload);
 
         Some(PriorityFrame {
             stream_id: stream_id,
@@ -147,9 +168,13 @@ impl Frame for PriorityFrame {
         })
     }
 
+    /// `Priority` frame does not set any flags
+    fn is_set(&self, flag: NoFlag) -> bool {
+        true
+    }
+
     /// Returns the `StreamId` of the stream to which the frame is associated
     ///
-    /// A `PriorityFrame` always has to be associated to stream `0`.
     fn get_stream_id(&self) -> StreamId {
         self.stream_id
     }
@@ -159,13 +184,17 @@ impl Frame for PriorityFrame {
         (self.payload_len(), 0x2, 0, self.stream_id)
     }
 
+    /// `PriorityFrame` does not set any flags
+    fn set_flag(&mut self, flag: NoFlag) {
+    }
+
     /// Returns a `Vec` with the serialized representation of the frame.
     fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::with_capacity(self.payload_len() as usize);
         // The header
         buf.extend(pack_header(&self.get_header()).to_vec().into_iter());
         // and then the body
-        buf.extend(&self.payload.serialize().to_vec().into_iter());
+        buf.extend(self.stream_dep.serialize().to_vec().into_iter());
 
         buf
     }
