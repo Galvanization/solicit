@@ -27,7 +27,7 @@ impl Flag for PingFlag {
     }
 }
 
-/// A struct representing the DATA frames of HTTP/2, as defined in the HTTP/2
+/// A struct representing the PING frames of HTTP/2, as defined in the HTTP/2
 /// spec, section 6.1.
 #[derive(PartialEq)]
 #[derive(Debug)]
@@ -35,7 +35,7 @@ pub struct PingFrame {
     /// The data found in the frame as an opaque byte sequence. It never
     /// includes padding bytes.
     pub data: Vec<u8>,
-    /// Represents the flags currently set on the `DataFrame`, packed into a
+    /// Represents the flags currently set on the `PingFrame`, packed into a
     /// single byte.
     flags: u8,
 }

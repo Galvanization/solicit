@@ -57,6 +57,10 @@ pub use self::continuationframe::{
     ContinuationFrame,
 };
 
+pub use self::priorityframe::{
+    PriorityFrame,
+};
+
 pub mod frames;
 mod test;
 pub mod dataframe;
@@ -64,3 +68,4 @@ pub mod settingsframe;
 pub mod headersframe;
 pub mod pingframe;
 pub mod continuationframe;
+pub mod priorityframe;
